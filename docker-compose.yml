@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: debug_shop_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: shop
+      POSTGRES_PASSWORD: shop123
+      POSTGRES_DB: debug_shop
+    ports:
+      - "5432:5432"
+    volumes:
+      - debug_shop_data:/var/lib/postgresql/data
+
+volumes:
+  debug_shop_data:
