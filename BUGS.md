@@ -12,7 +12,7 @@ Ishlatiladigan akkauntlar: `admin@shop.uz / admin123`, `ali@shop.uz / user123`,
 
 ## A. Autentifikatsiya va Swagger sozlamalari
 
-### `[ ]` A1 — Swaggerda tokenni yuborib bo'lmaydi
+### `[x]` A1 — Swaggerda tokenni yuborib bo'lmaydi
 
 **Belgisi:** `http://localhost:3000/api/docs` da o'ng yuqorida **Authorize**
 tugmasi yo'q. Login qilib token olsangiz ham, uni Swagger orqali yubora
@@ -196,7 +196,7 @@ tushunarli xabar.
 
 ## D. Biznes-logika (eng qiyin qismi)
 
-### `[ ]` D1 — Buyurtma summasi noto'g'ri
+### `[x]` D1 — Buyurtma summasi noto'g'ri
 
 **Belgisi:** savatda `iPhone 14` (899, 3 dona) va `AirPods Pro 2` (249,
 2 dona) bor. `GET /api/cart` → `total: 3195` (to'g'ri).
@@ -206,7 +206,7 @@ tushunarli xabar.
 
 ---
 
-### `[ ]` D2 — Zaxiradan ko'p buyurtma berish mumkin
+### `[x]` D2 — Zaxiradan ko'p buyurtma berish mumkin
 
 **Belgisi:** `ASUS ROG Strix G16` zaxirasi **2 ta**. Savatga **50 ta**
 qo'shib buyurtma bersangiz — buyurtma **201** bilan yaratiladi, mahsulot
@@ -222,7 +222,7 @@ tranzaksiya** ichida bo'lsin (hammasi bo'ladi yoki hech nimasi).
 
 ---
 
-### `[ ]` D3 — Buyurtmadan keyin savat tozalanmaydi
+### `[x]` D3 — Buyurtmadan keyin savat tozalanmaydi
 
 **Belgisi:** `POST /api/orders` muvaffaqiyatli o'tadi, lekin `GET /api/cart`
 hali ham o'sha mahsulotlarni ko'rsatadi. Kodda savatni tozalash qatori
@@ -235,7 +235,7 @@ hali ham o'sha mahsulotlarni ko'rsatadi. Kodda savatni tozalash qatori
 
 ---
 
-### `[ ]` D4 — Boshqa odamning buyurtmasini ko'rish mumkin
+### `[x]` D4 — Boshqa odamning buyurtmasini ko'rish mumkin
 
 **Belgisi:** `ali@shop.uz` buyurtma beradi (masalan id = 2). Keyin
 `vali@shop.uz` bilan kirib `GET /api/orders/2` chaqirsangiz — **Ali ning
@@ -246,7 +246,7 @@ hammasini ko'ra olsin.
 
 ---
 
-### `[ ]` D5 — Sana bo'yicha filtr har doim bo'sh
+### `[x]` D5 — Sana bo'yicha filtr har doim bo'sh
 
 **Belgisi:** `GET /api/orders` → 2 ta buyurtma.
 `GET /api/orders?date=2026-09-07` (bugungi sana) → **0 ta**.
@@ -256,7 +256,7 @@ Qaysi sanani yozsangiz ham natija bo'sh.
 
 ---
 
-### `[ ]` D6 — N+1 so'rov muammosi
+### `[x]` D6 — N+1 so'rov muammosi
 
 **Belgisi:** `GET /api/orders` chaqirganda terminaldagi `prisma:query`
 loglarini sanang. Buyurtmalar va ulardagi mahsulotlar soni ortgan sari

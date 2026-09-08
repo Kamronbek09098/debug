@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -21,36 +22,57 @@ export class OrdersService {
       throw new BadRequestException('Savat bo‘sh, buyurtma berib bo‘lmaydi');
     }
 
-    let total = 0;
+    // D2 — avval har bir mahsulotning holati va zaxirasi tekshiriladi.
+    // Bironta yaroqsiz bo'lsa, hech narsa o'zgarmasdan 400 qaytadi.
     for (const item of cartItems) {
-      total += item.product.price;
+      if (item.product.deletedAt) {
+        throw new BadRequestException(
+          `"${item.product.title}" sotuvdan olingan`,
+        );
+      }
+      if (item.product.stock < item.quantity) {
+        throw new BadRequestException(
+          `"${item.product.title}" uchun zaxira yetarli emas ` +
+            `(bor: ${item.product.stock}, so‘ralgan: ${item.quantity})`,
+        );
+      }
     }
 
-    const order = await this.prisma.order.create({
-      data: {
-        userId,
-        total,
-        items: {
-          create: cartItems.map((item) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            price: item.product.price,
-          })),
+    // D1 — summa har bir qatorning narx * miqdor yig'indisiga teng.
+    const total = cartItems.reduce(
+      (sum, item) => sum + item.product.price * item.quantity,
+      0,
+    );
+
+    // D2 + D3 — buyurtma yaratish + zaxira kamaytirish + savatni tozalash
+    // bitta tranzaksiya ichida (hammasi bo'ladi yoki hech nimasi).
+    return this.prisma.$transaction(async (tx) => {
+      const order = await tx.order.create({
+        data: {
+          userId,
+          total,
+          items: {
+            create: cartItems.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              price: item.product.price,
+            })),
+          },
         },
-      },
-      include: { items: true },
-    });
-
-    for (const item of cartItems) {
-      await this.prisma.product.update({
-        where: { id: item.productId },
-        data: { stock: { decrement: item.quantity } },
+        include: { items: true },
       });
-    }
 
-    this.prisma.cartItem.deleteMany({ where: { userId } });
+      for (const item of cartItems) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: { decrement: item.quantity } },
+        });
+      }
 
-    return order;
+      await tx.cartItem.deleteMany({ where: { userId } });
+
+      return order;
+    });
   }
 
   async findAll(userId: number, query: FindOrdersDto) {
@@ -60,33 +82,28 @@ export class OrdersService {
       where.status = query.status;
     }
 
+    // D5 — sana bo'yicha filtr: o'sha kunning boshidan keyingi kun boshigacha
+    // bo'lgan oraliq (gte start, lt end), aynan yarim tun emas.
     if (query.date) {
-      const day = new Date(query.date);
-      where.createdAt = { gte: day, lte: day };
+      const start = new Date(`${query.date}T00:00:00.000Z`);
+      if (Number.isNaN(start.getTime())) {
+        throw new BadRequestException('Sana formati noto‘g‘ri (YYYY-MM-DD)');
+      }
+      const end = new Date(start);
+      end.setUTCDate(end.getUTCDate() + 1);
+      where.createdAt = { gte: start, lt: end };
     }
 
-    const orders = await this.prisma.order.findMany({
+    // D6 — N+1 yo'q: mahsulotlar bitta include bilan olinadi, buyurtmalar
+    // soni ortsa ham SQL so'rovlar soni o'zgarmaydi.
+    return this.prisma.order.findMany({
       where,
-      include: { items: true },
+      include: { items: { include: { product: true } } },
       orderBy: { id: 'desc' },
     });
-
-    const result = [];
-    for (const order of orders) {
-      const itemsWithProduct = [];
-      for (const item of order.items) {
-        const product = await this.prisma.product.findUnique({
-          where: { id: item.productId },
-        });
-        itemsWithProduct.push({ ...item, product });
-      }
-      result.push({ ...order, items: itemsWithProduct });
-    }
-
-    return result;
   }
 
-  async findOne(id: number) {
+  async findOne(id: number, user: { id: number; role: string }) {
     const order = await this.prisma.order.findUnique({
       where: { id },
       include: { items: { include: { product: true } } },
@@ -94,6 +111,11 @@ export class OrdersService {
 
     if (!order) {
       throw new NotFoundException(`${id} idli buyurtma topilmadi`);
+    }
+
+    // D4 — o'zining buyurtmasi bo'lmasa 403. ADMIN hammasini ko'ra oladi.
+    if (order.userId !== user.id && user.role !== 'ADMIN') {
+      throw new ForbiddenException('Bu buyurtma sizga tegishli emas');
     }
 
     return order;

@@ -40,8 +40,8 @@ export class OrdersController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Bitta buyurtma' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.ordersService.findOne(id);
+  findOne(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: any) {
+    return this.ordersService.findOne(id, user);
   }
 
   @Patch(':id/status')
